@@ -153,3 +153,18 @@ export const deletePost = async (req, res) => {
         res.status(500).json({ message: "Failed to delete post" });
     }
 }
+
+export const approvePost = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const post = await prisma.post.update({
+      where: { id },
+      data: { status: "approved" }, // Cập nhật trạng thái bài viết
+    });
+    res.status(200).json({ message: "Post approved successfully!", post });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to approve post!" });
+  }
+};
