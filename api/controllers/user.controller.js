@@ -115,48 +115,80 @@ export const savePost = async (req, res) => {
   }
 };
 
-  export const profilePosts = async (req, res) => {
-    const tokenUserId = req.userId;
-  
-    try {
-      const userPosts = await prisma.post.findMany({
-        where: { userId: tokenUserId },
-      });
-  
-      const saved = await prisma.savedPost.findMany({
-        where: { userId: tokenUserId },
-        include: {
-          post: true,
-        },
-      });
-  
-      const savedPosts = saved.map((item) => item.post);
-  
-      res.status(200).json({ userPosts, savedPosts });
-    } catch (err) {
-      console.error("Error fetching profile posts:", err);
-      res.status(500).json({ message: "Failed to load profile data" });
-    }
-  };
+export const savePosts = async (req, res) => {
+  const { postIds } = req.body; // Lấy danh sách `postIds` từ body request
+  const tokenUserId = req.userId;
 
-  export const getNotificationNumber = async (req, res) => {
-    const tokenUserId = req.userId;
-    try {
-      const number = await prisma.chat.count({
-        where: {
-          userIDs: {
+  try {
+    // Xóa các bài viết đã lưu trước đó nếu chúng nằm trong danh sách mới
+    await prisma.savedPost.deleteMany({
+      where: {
+        userId: tokenUserId,
+        postId: { in: postIds },
+      },
+    });
+
+    // Thêm các bài viết mới vào danh sách đã lưu
+    const saveOperations = postIds.map((postId) =>
+      prisma.savedPost.create({
+        data: {
+          userId: tokenUserId,
+          postId,
+        },
+      })
+    );
+
+    await Promise.all(saveOperations);
+
+    res.status(200).json({ message: "Posts saved successfully!" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Failed to save posts!" });
+  }
+};
+
+export const profilePosts = async (req, res) => {
+  const tokenUserId = req.userId;
+
+  try {
+    const userPosts = await prisma.post.findMany({
+      where: { userId: tokenUserId },
+    });
+
+    const saved = await prisma.savedPost.findMany({
+      where: { userId: tokenUserId },
+      include: {
+        post: true,
+      },
+    });
+
+    const savedPosts = saved.map((item) => item.post);
+
+    res.status(200).json({ userPosts, savedPosts });
+  } catch (err) {
+    console.error("Error fetching profile posts:", err);
+    res.status(500).json({ message: "Failed to load profile data" });
+  }
+};
+
+export const getNotificationNumber = async (req, res) => {
+  const tokenUserId = req.userId;
+  try {
+    const number = await prisma.chat.count({
+      where: {
+        userIDs: {
+          hasSome: [tokenUserId],
+        },
+        NOT: {
+          seenBy: {
             hasSome: [tokenUserId],
           },
-          NOT: {
-            seenBy: {
-              hasSome: [tokenUserId],
-            },
-          },
         },
-      });
-      res.status(200).json(number);
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({ message: "Failed to get profile posts!" });
-    }
-  }; 
+      },
+    });
+    res.status(200).json(number);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Failed to get profile posts!" });
+  }
+}; 

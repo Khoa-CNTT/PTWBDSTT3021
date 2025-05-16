@@ -2,8 +2,13 @@ import jwt from "jsonwebtoken";
 
 export const verifyToken = (req, res, next) => {
     const token = req.cookies.token;
-    
-    if (!token) return res.status(401).json({ message: "Not Authenticated" });
+
+    console.log("Token received in verifyToken middleware:", req.cookies.token);
+
+    if (!token) {
+        console.error("Authentication token is missing or not sent in the request!");
+        return res.status(401).json({ message: "Authentication token is missing or not sent in the request!" });
+    }
 
     jwt.verify(token, process.env.JWT_SECRET_KEY, (err, payload) => {
         if (err) return res.status(403).json({ message: "Token is not valid!" });

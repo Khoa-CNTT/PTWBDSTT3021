@@ -1,4 +1,6 @@
+import 'dotenv/config';
 import {Server, Socket} from "socket.io";
+import OpenAI from "openai";
 
 const io = new Server({
     cors: {
@@ -7,10 +9,9 @@ const io = new Server({
 });
 
 // Cấu hình OpenAI API
-const configuration = new Configuration({
+const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-  });
-  const openai = new OpenAIApi(configuration);
+});
 
 let onlineUser = [];
 
@@ -42,13 +43,13 @@ io.on("connection", (socket) => {
 
     socket.on("userMessage", async (message) => {
         try {
-          const response = await openai.createCompletion({
+          const response = await openai.completions.create({
             model: "text-davinci-003",
             prompt: message,
             max_tokens: 150,
           });
     
-          const reply = response.data.choices[0].text.trim();
+          const reply = response.choices[0].text.trim();
           socket.emit("aiReply", reply);
         } catch (err) {
           console.error("Error with AI chat:", err);
@@ -61,4 +62,4 @@ io.on("connection", (socket) => {
     })
 });
 
-io.listen("4000")
+io.listen("4000");
